@@ -15,9 +15,10 @@ import com.aware.utils.Aware_Plugin;
 
 import java.util.Calendar;
 
-public class Plugin extends Aware_Plugin implements BroadcastReceiver {
+public class Plugin extends Aware_Plugin  {
 
     private AlarmManager alarmManager;
+    private PendingIntent pendingAlarmIntent;
 
     @Override
     public void onCreate() {
@@ -54,8 +55,20 @@ public class Plugin extends Aware_Plugin implements BroadcastReceiver {
         esm_filter.addAction(ESM.ACTION_AWARE_ESM_DISMISSED);
         esm_filter.addAction(ESM.ACTION_AWARE_ESM_EXPIRED);
         esm_filter.addAction(ESM.ACTION_AWARE_ESM_ANSWERED);
-        registerReceiver(this, esm_filter);
+        registerReceiver(moodListener, esm_filter);
+
+        //Start alarm manager
         alarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
+        Intent alarmIntent = new Intent(this, Plugin.class);
+        alarmIntent.putExtra("WAKEUP", true);
+        pendingAlarmIntent = PendingIntent.getService(
+                getApplicationContext(),
+                0,
+                alarmIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT);
+        alarmManager.setInexactRepeating(AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                100,
+                1000 * 5, pendingAlarmIntent);
 
         //Activate plugin
         Aware.startPlugin(this, getPackageName());
@@ -63,20 +76,25 @@ public class Plugin extends Aware_Plugin implements BroadcastReceiver {
         //Apply settings in AWARE
         sendBroadcast(new Intent(Aware.ACTION_AWARE_REFRESH));
 
-        //Show ESM
-
     }
 
-    private void scheduleMorningQuestionnaire() {
-        Intent alarmIntent = new Intent( this, Plugin.class );
+    private static MoodSensorListener moodListener = new MoodSensorListener();
+    public static class MoodSensorListener extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            //DO STUFF < 15s
 
-        alarmManager.setInexactRepeating(AlarmManager.ELAPSED_REALTIME_WAKEUP,
-                AlarmManager.INTERVAL_HALF_HOUR,
-                AlarmManager.INTERVAL_HOUR, alarmIntent);
+            // CHECK IF THERE WAS ESM
+            
+            //SHOW ESM HERE
+        }
+    }
 
-        morningIntent = PendingIntent.getBroadcast(getApplicationContext(), morningIntentRC, alarmIntent, PendingIntent.FLAG_UPDATE_CURRENT);
-        alarmManager.set(AlarmManager.RTC_WAKEUP, cal.getTimeInMillis(), morningIntent); //use WEEKLY_INTENT_RC, so this gets overwritten in case we call this one twice...
-        Log.d(TAG, "Set get next bid alarm for :" + cal.getTimeInMillis());
+    @Override
+    public void onStart(Intent intent, int startId) {
+        super.onStart(intent, startId);
+
+        Log.d("ALARM", "START");
     }
 
     //This function gets called every 5 minutes by AWARE to make sure this plugin is still running.
@@ -85,6 +103,8 @@ public class Plugin extends Aware_Plugin implements BroadcastReceiver {
 
         //Check if the user has toggled the debug messages
         DEBUG = Aware.getSetting(this, Aware_Preferences.DEBUG_FLAG).equals("true");
+
+        Log.d("ALARM", "START CMD");
 
         return super.onStartCommand(intent, flags, startId);
     }
@@ -99,14 +119,12 @@ public class Plugin extends Aware_Plugin implements BroadcastReceiver {
         //e.g., Aware.setSetting(this, Aware_Preferences.STATUS_ACCELEROMETER, false);
 
         //Unregister receiver
-        unregisterReceiver(this);
+        unregisterReceiver(moodListener);
+
+        //Stop alarm
+        alarmManager.cancel(pendingAlarmIntent);
 
         //Stop plugin
         Aware.stopPlugin(this, getPackageName());
-    }
-
-    @Override
-    public void onReceive(Context context, Intent intent) {
-        // Received broadcast
     }
 }
