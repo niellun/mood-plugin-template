@@ -1,4 +1,4 @@
-package com.aware.plugin.template;
+package com.aware.plugin.moodsensor;
 
 import android.app.Application;
 import android.test.ApplicationTestCase;

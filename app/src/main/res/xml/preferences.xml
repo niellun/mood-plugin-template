@@ -6,7 +6,7 @@
     <com.aware.ui.Aware_Toolbar android:title="@string/app_name" />
 
     <CheckBoxPreference
-        android:key="status_plugin_template"
+        android:key="status_plugin_moodsensor"
         android:defaultValue="false"
         android:persistent="true"
         android:summary="Activate/deactivate plugin" />
