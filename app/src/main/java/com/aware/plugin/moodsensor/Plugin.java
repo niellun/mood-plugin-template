@@ -55,7 +55,14 @@ public class Plugin extends Aware_Plugin  {
         esm_filter.addAction(ESM.ACTION_AWARE_ESM_DISMISSED);
         esm_filter.addAction(ESM.ACTION_AWARE_ESM_EXPIRED);
         esm_filter.addAction(ESM.ACTION_AWARE_ESM_ANSWERED);
+        esm_filter.addAction(ESM.ACTION_AWARE_ESM_QUEUE_STARTED);
         registerReceiver(moodListener, esm_filter);
+
+        //Activate plugin
+        Aware.startPlugin(this, getPackageName());
+
+        //Apply settings in AWARE
+        sendBroadcast(new Intent(Aware.ACTION_AWARE_REFRESH));
 
         //Start alarm manager
         alarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
@@ -67,15 +74,8 @@ public class Plugin extends Aware_Plugin  {
                 alarmIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT);
         alarmManager.setInexactRepeating(AlarmManager.ELAPSED_REALTIME_WAKEUP,
-                100,
-                1000 * 30, pendingAlarmIntent);
-
-        //Activate plugin
-        Aware.startPlugin(this, getPackageName());
-
-        //Apply settings in AWARE
-        sendBroadcast(new Intent(Aware.ACTION_AWARE_REFRESH));
-
+                1000 * 100,
+                1000 * 30 * 60, pendingAlarmIntent);
     }
 
     private static MoodSensorListener moodListener = new MoodSensorListener();
@@ -87,9 +87,15 @@ public class Plugin extends Aware_Plugin  {
         @Override
         public void onReceive(Context context, Intent intent) {
             //DO STUFF < 15s
+            if(intent.getAction()==ESM.ACTION_AWARE_ESM_QUEUE_STARTED && ESMDone>0)
+            {
+                Log.d("ESM", "QUEUE "+intent.toString());
+                ESMDone = 0;
+                return;
+            }
 
             // NOTIFY THAT ESM APPROVED
-            Log.d("ESM", "DONE");
+            Log.d("ESM", "DONE "+intent.toString());
 
             ESMDone++;
         }
@@ -103,12 +109,11 @@ public class Plugin extends Aware_Plugin  {
         DEBUG = Aware.getSetting(this, Aware_Preferences.DEBUG_FLAG).equals("true");
 
         // CHEK PREVIOUS ESM
-
+        Log.d("ALARM", "ABOUT TO SHOW ESM "+intent.hasExtra("WAKEUP") +" "+moodListener.ESMDone);
         // SHOW ESM
         if(intent.hasExtra("WAKEUP") && moodListener.ESMDone>=3)
         {
             Log.d("ALARM", "SHOW ESM");
-            moodListener.ESMDone = 0;
             showEsm();
         }
 
