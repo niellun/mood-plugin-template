@@ -68,7 +68,7 @@ public class Plugin extends Aware_Plugin  {
                 PendingIntent.FLAG_UPDATE_CURRENT);
         alarmManager.setInexactRepeating(AlarmManager.ELAPSED_REALTIME_WAKEUP,
                 100,
-                1000 * 5, pendingAlarmIntent);
+                1000 * 30, pendingAlarmIntent);
 
         //Activate plugin
         Aware.startPlugin(this, getPackageName());
@@ -79,22 +79,20 @@ public class Plugin extends Aware_Plugin  {
     }
 
     private static MoodSensorListener moodListener = new MoodSensorListener();
+
     public static class MoodSensorListener extends BroadcastReceiver {
+
+        public int ESMDone = 1000;
+
         @Override
         public void onReceive(Context context, Intent intent) {
             //DO STUFF < 15s
 
-            // CHECK IF THERE WAS ESM
-            
-            //SHOW ESM HERE
+            // NOTIFY THAT ESM APPROVED
+            Log.d("ESM", "DONE");
+
+            ESMDone++;
         }
-    }
-
-    @Override
-    public void onStart(Intent intent, int startId) {
-        super.onStart(intent, startId);
-
-        Log.d("ALARM", "START");
     }
 
     //This function gets called every 5 minutes by AWARE to make sure this plugin is still running.
@@ -104,10 +102,63 @@ public class Plugin extends Aware_Plugin  {
         //Check if the user has toggled the debug messages
         DEBUG = Aware.getSetting(this, Aware_Preferences.DEBUG_FLAG).equals("true");
 
-        Log.d("ALARM", "START CMD");
+        // CHEK PREVIOUS ESM
+
+        // SHOW ESM
+        if(intent.hasExtra("WAKEUP") && moodListener.ESMDone>=3)
+        {
+            Log.d("ALARM", "SHOW ESM");
+            moodListener.ESMDone = 0;
+            showEsm();
+        }
 
         return super.onStartCommand(intent, flags, startId);
     }
+
+    private void showEsm() {
+        //Define the ESM to be displayed
+        String esmString = "[{'esm': {\n" +
+                "'esm_type': 4,\n" +
+                "'esm_title': 'ESM Likert',\n" +
+                "'esm_instructions': 'How happy are you?',\n" +
+                "'esm_likert_max': 5,\n" +
+                "'esm_likert_max_label': 'Happy',\n" +
+                "'esm_likert_min_label': 'Sad',\n" +
+                "'esm_likert_step': 1,\n" +
+                "'esm_submit': 'OK',\n" +
+                "'esm_expiration_threashold': 600,\n" +
+                "'esm_trigger': 'AWARE Tester'\n" +
+                "}}," +
+                "{'esm': {\n" +
+                "'esm_type': 4,\n" +
+                "'esm_title': 'ESM Likert',\n" +
+                "'esm_instructions': 'How angry are you?',\n" +
+                "'esm_likert_max': 5,\n" +
+                "'esm_likert_max_label': 'Angry',\n" +
+                "'esm_likert_min_label': 'Calm',\n" +
+                "'esm_likert_step': 1,\n" +
+                "'esm_submit': 'OK',\n" +
+                "'esm_expiration_threashold': 600,\n" +
+                "'esm_trigger': 'AWARE Tester'\n" +
+                "}},{'esm': {\n" +
+                "'esm_type': 4,\n" +
+                "'esm_title': 'ESM Likert',\n" +
+                "'esm_instructions': 'How in love are you?',\n" +
+                "'esm_likert_max': 5,\n" +
+                "'esm_likert_max_label': 'Lonely',\n" +
+                "'esm_likert_min_label': 'In love',\n" +
+                "'esm_likert_step': 1,\n" +
+                "'esm_submit': 'OK',\n" +
+                "'esm_expiration_threashold': 600,\n" +
+                "'esm_trigger': 'AWARE Tester'\n" +
+                "}}]";
+
+        //Queue the ESM to be displayed when possible
+        Intent esm = new Intent(ESM.ACTION_AWARE_QUEUE_ESM);
+        esm.putExtra(ESM.EXTRA_ESM, esmString);
+        sendBroadcast(esm);
+    }
+
 
     @Override
     public void onDestroy() {
